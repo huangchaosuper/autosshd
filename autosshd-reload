@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+
+$cmd = $ARGV[0];
+
+open P, "ps -eo pid,args |";
+%h = ();
+while (<P>) {
+	chomp;
+	next if not /^ *(\d+).*ssh.*-N (.*)$/;
+	$pid = $1;
+	$args = $2;
+	$h{$args} .= "$pid ";
+	print "running $args\n" if /autossh/;
+}
+
+sub killall {
+	for (keys %h) {
+		print "kill $_ $h{$_}\n";
+		system("kill -9 $h{$_}");
+	}
+}
+
+if ($cmd eq 'kill') {
+	killall;
+	exit;
+}
+
+open F, "/etc/autosshd.conf";
+while (<F>) {
+	next if not /^autossh/;
+	chomp;
+	s/^autossh *//;
+	s/ *$//;
+	print "config $_\n";
+	if (not exists $h{$_}) {
+		print "new $_\n";
+		system("AUTOSSH_GATETIME=0 autossh -f -N $_");
+	}
+	delete $h{$_};
+}
+killall;
+

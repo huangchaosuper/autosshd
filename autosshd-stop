@@ -1,0 +1,4 @@
+#!/bin/bash
+
+autosshd-reload kill
+
